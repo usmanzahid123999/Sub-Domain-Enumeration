@@ -8,8 +8,4 @@ cat res.txt
 echo
 echo
 echo live domain are
-while IFS= read -r domain; do
-if httpx -status-code -silent “$domain” | grep -q ‘200’; then
-echo $domain
-fi
-done < res.txt
+cat res.txt | httpx -silent -follow-redirects -mc 200 | tee -a live.txt
