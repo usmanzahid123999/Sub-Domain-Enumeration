@@ -1,0 +1,50 @@
+#!/bin/bash
+
+# Prompt user to enter domain
+read -p "Enter domain: " DOMAIN
+
+# Step 1: Subdomain Enumeration using Subfinder and Amass
+subfinder -d $DOMAIN -o subdomains.txt
+subfinder -d $DOMAIN -o more-subdomains.txt
+amass enum -passive -norecursive -noalts -d $DOMAIN -o subs.txt
+amass enum -passive -norecursive -noalts -d subs.txt -o more-subs.txt
+
+# Combine and sort unique subdomains
+cat more-subdomains.txt subdomains.txt subs.txt more-subs.txt | sort -u > targets.txt
+
+# Step 2: Check subdomains using DNSx
+dnsx -l targets.txt -o targets_ok.txt
+
+# Split the list into groups of 15 for Naabu
+split -l 15 targets_ok.txt 15_file_
+
+# Step 3: Port Scanning using Naabu
+for file in 15_file_*; do
+    nohup naabu -list "$file" -p - -o "${file}.out" &
+done
+
+# Wait for all background processes to finish
+wait
+
+# Combine and sort unique port scan results
+cat 15_file_*.out | sort -u > ports.out
+
+echo
+# Display contents of output files
+echo "Contents of subdomains:"
+cat subdomains.txt more-subdomains.txt subs.txt more-subs.txt
+echo
+echo
+echo "Contents of live subdomains:"
+cat targets_ok.txt
+echo
+echo
+echo "Contents of port scan results:"
+cat 15_file_*.out
+echo
+echo
+echo "Contents of open ports:"
+cat ports.out
+echo
+echo
+echo "Process completed."
